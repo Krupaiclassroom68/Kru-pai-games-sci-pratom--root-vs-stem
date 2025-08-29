@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Kru Pai Classroom – เกมเลือกพืช (รากใต้ดิน vs ลำต้นใต้ดิน) 10 รอบ</title>
+<style>
+  :root{
+    --bg:#ffffff;--fg:#111;--primary:#2e7d32;--primary-2:#e8f5e9;--ok:#1b5e20;--bad:#c62828;--muted:#666;
+  }
+  html,body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,TH Sarabun New,Prompt,sans-serif;background:var(--bg);color:var(--fg);} 
+  .wrap{max-width:900px;margin:0 auto;padding:20px 16px 64px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--primary-2);border-bottom:3px solid var(--primary);padding:14px 16px;border-radius:16px;margin-bottom:16px}
+  header h1{font-size:clamp(18px,4vw,28px);margin:0;line-height:1.2}
+  header .brand{font-weight:700;color:var(--primary)}
+  .card{background:#fff;border:1px solid #eee;border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.06);padding:18px;margin:14px 0}
+  .start h2{margin:0 0 8px;font-size:clamp(18px,3.6vw,24px)}
+  .row{display:grid;grid-template-columns:1fr;gap:12px}
+  label{font-size:14px;color:#444}
+  input[type=text]{width:100%;padding:14px 16px;border-radius:14px;border:1px solid #ddd;font-size:16px}
+  button{cursor:pointer;border:none;padding:12px 18px;border-radius:14px;font-weight:700}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-ghost{background:#f6f6f6}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;color:#444}
+  .chip{background:#f5f5f5;border-radius:999px;padding:6px 10px}
+  .hidden{display:none}
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:700px){.grid{grid-template-columns:1fr 1fr 1fr 1fr 1fr}}
+  .plant{border:1px solid #e5e5e5;border-radius:14px;padding:12px;text-align:center;user-select:none;transition:transform .06s}
+  .plant:hover{transform:translateY(-1px)}
+  .plant.sel{outline:3px solid var(--primary); background:#f1fbf1}
+  .plant.ok{border-color:var(--ok); background:#f3fff4}
+  .plant.no{border-color:var(--bad); background:#fff5f5}
+  .statusbar{display:flex;gap:12px;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;border:1px solid #eee;border-radius:14px;padding:10px 12px;margin:10px 0;z-index:5}
+  .score{font-weight:800}
+  .rule{font-size:18px;margin:6px 0 0}
+  .footer{text-align:center;color:#666;margin-top:24px}
+  .hint{color:var(--muted);font-size:13px}
+  .badge{display:inline-block;background:var(--primary);color:#fff;padding:6px 10px;border-radius:999px;font-size:14px;font-weight:700}
+  .timer{font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">Kru Pai Classroom</div>
+      <h1>เกมเลือกพืช – รากใต้ดิน / ลำต้นใต้ดิน (10 รอบ)</h1>
+      <div class="hint">กติกา: เลือกให้ตรงตามโจทย์ในแต่ละรอบ (มี 2–3 ถูกใน 5 ตัวอย่าง) • คลิกถูก +1 แต้ม • คลิกผิด -1 แต้ม • ไม่คลิกไม่มีผล • จับเวลา <b>10 วินาที/รอบ</b></div>
+    </div>
+    <div class="badge" id="phase">เริ่มต้น</div>
+  </header>
+
+  <!-- Start Screen -->
+  <section id="start" class="card start">
+    <h2>ยินดีต้อนรับ 🌿</h2>
+    <p>เกมนี้มี <b>10 รอบ</b> แต่ละรอบจะให้โจทย์แบบสุ่ม <b>รากใต้ดิน</b> หรือ <b>ลำต้นใต้ดิน</b> จากนั้นแสดงพืช <b>5 ชนิด</b> ให้คลิกเลือกในเวลา <b>10 วินาที</b></p>
+    <div class="row">
+      <div>
+        <label>ชื่อเล่น</label>
+        <input id="player" type="text" placeholder="เช่น Mint"/>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-primary" id="btnStart" type="button">เริ่มเล่น</button>
+    </div>
+  </section>
+
+  <!-- Game Screen -->
+  <section id="game" class="hidden">
+    <div class="statusbar">
+      <div class="meta">
+        <span>ผู้เล่น: <strong id="who">-</strong></span>
+        <span class="chip">รอบ <span id="round">1</span>/10</span>
+        <span class="chip score">คะแนน <span id="pts">0</span> / <span id="max">0</span> (<span id="pct">0</span>%)</span>
+      </div>
+      <div class="meta">
+        <span class="timer">⏳ <span id="left">20</span>s</span>
+        <button id="btnBackHome" class="btn-ghost" type="button" onclick="return backHome(event)">🏠 กลับหน้าแรก</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="rule" class="rule"></div>
+      <div id="board" class="grid" style="margin-top:12px"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button id="btnCheck" class="btn-primary" type="button">ตรวจคำตอบ</button>
+        <button id="btnNext" class="btn-ghost hidden" type="button">ข้อถัดไป ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Result Screen -->
+  <section id="result" class="hidden card">
+    <h2>สรุปคะแนน 🎉</h2>
+    <p><strong id="sumName"></strong> ได้คะแนนรวม <strong id="sumScore">0</strong> / <span id="sumMax">0</span> คะแนน (<span id="sumPct">0</span>%) จาก 10 รอบ</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 6px">
+      <button class="btn-primary" id="btnRestart" type="button" onclick="return backHome(event)">กลับหน้าแรก</button>
+    </div>
+  </section>
+
+  <div class="footer">© Kru Pai Classroom · Plant Select Game</div>
+</div>
+
+<script>
+// กลุ่มพืช: root = รากใต้ดิน (รากสะสมอาหาร), stem = ลำต้นใต้ดิน (เหง้า/หัว/หัวพันธุ์/หัวใต้ดิน)
+const PLANTS = [
+  // รากใต้ดิน
+  {name:"แครอท", type:"root"},
+  {name:"มันสำปะหลัง", type:"root"},
+  {name:"มันเทศ", type:"root"},
+  {name:"หัวผักกาด", type:"root"},
+  {name:"หัวไชเท้า", type:"root"},
+  {name:"บีทรูต", type:"root"},
+  {name:"มันแกว", type:"root"},
+
+  // ลำต้นใต้ดิน (เพิ่มตามที่ครูปายขอ)
+  {name:"ขิง", type:"stem"},            // rhizome
+  {name:"ข่า", type:"stem"},            // rhizome
+  {name:"ขมิ้น", type:"stem"},          // rhizome
+  {name:"กระชาย", type:"stem"},         // rhizome (fingerroot)
+  {name:"เหง้ากล้วย", type:"stem"},     // rhizome (banana corm/rhizome)
+  {name:"มันฝรั่ง", type:"stem"},       // tuber
+  {name:"เผือก", type:"stem"}           // corm
+];
+
+const RULES = [
+  {key:"root", text:"จงเลือกพืชที่เป็น 'รากใต้ดิน' (รากสะสมอาหาร)"},
+  {key:"stem", text:"จงเลือกพืชที่เป็น 'ลำต้นใต้ดิน' (เหง้า/หัว/หัวพันธุ์/หัวใต้ดิน)"}
+];
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
+
+const el = id=>document.getElementById(id);
+const start = el('start');
+const game = el('game');
+const result = el('result');
+const phase = el('phase');
+
+let state = {round:1, score:0, max:0, name:"-", target:"root", board:[], selected:new Set(), checked:false, secs:10, timer:null};
+
+function newRound(){
+  // สุ่มกติกา: root หรือ stem (สลับแบบสุ่มตามที่ครูปายต้องการ)
+  const rule = RULES[Math.floor(Math.random()*RULES.length)];
+  state.target = rule.key;
+  el('rule').textContent = `รอบที่ ${state.round}: ${rule.text} (มีถูกประมาณ 2–3 ชนิด)`;
+
+  // สุ่มจำนวนคำตอบถูก 2 หรือ 3
+  const k = Math.random()<0.5?2:3;
+  state.max += k;
+  document.getElementById('max').textContent = state.max;
+
+  const correctPool = shuffle(PLANTS.filter(p=>p.type===state.target)).slice(0,k);
+  const wrongPool = shuffle(PLANTS.filter(p=>p.type!==state.target)).slice(0, 5-k);
+  state.board = shuffle([...correctPool, ...wrongPool]);
+
+  // วาดกระดาน
+  const board = el('board');
+  board.innerHTML = "";
+  state.selected = new Set();
+  state.checked = false;
+  state.board.forEach((p,idx)=>{
+    const div = document.createElement('div');
+    div.className = 'plant';
+    div.textContent = p.name;
+    div.dataset.idx = idx;
+    div.onclick = ()=>{
+      if(state.checked) return;
+      const i = parseInt(div.dataset.idx);
+      if(state.selected.has(i)){ state.selected.delete(i); div.classList.remove('sel'); }
+      else { state.selected.add(i); div.classList.add('sel'); }
+    };
+    board.appendChild(div);
+  });
+
+  // ปุ่ม
+  el('btnCheck').classList.remove('hidden');
+  el('btnNext').classList.add('hidden');
+  el('round').textContent = state.round;
+
+  // ตั้งเวลา 10 วินาที
+  clearInterval(state.timer);
+  let t = state.secs;
+  el('left').textContent = t;
+  state.timer = setInterval(()=>{
+    t--; el('left').textContent = t;
+    if(t<=0){
+      clearInterval(state.timer);
+      if(!state.checked) checkAnswers(); // หมดเวลา = ตรวจอัตโนมัติ
+    }
+  },1000);
+}
+
+function checkAnswers(){
+  if(state.checked) return;
+  state.checked = true;
+  const board = el('board').children;
+  // ให้คะแนน: เลือกถูก +1, เลือกผิด -1, ไม่เลือก = 0
+  state.board.forEach((p,idx)=>{
+    const div = board[idx];
+    const picked = state.selected.has(idx);
+    if(p.type === state.target){
+      div.classList.add('ok');
+      if(picked) state.score += 1;
+    }else{
+      if(picked){ div.classList.add('no'); state.score -= 1; }
+    }
+  });
+  el('pts').textContent = state.score;
+  if(state.max>0){ document.getElementById('pct').textContent = Math.round(100*state.score/state.max); }
+  el('btnCheck').classList.add('hidden');
+  el('btnNext').classList.remove('hidden');
+}
+
+function nextRound(){
+  if(state.round >= 10){
+    // จบเกม
+    clearInterval(state.timer);
+    game.classList.add('hidden');
+    result.classList.remove('hidden');
+    phase.textContent = 'สรุปผล';
+    el('sumName').textContent = state.name;
+    el('sumScore').textContent = state.score;
+    document.getElementById('sumMax').textContent = state.max;
+    document.getElementById('sumPct').textContent = state.max>0 ? Math.round(100*state.score/state.max) : 0;
+    return;
+  }
+  state.round += 1;
+  newRound();
+}
+
+// เริ่มเกม
+el('btnStart').onclick = ()=>{
+  state.name = (el('player').value || 'นักเรียน');
+  state.round = 1; state.score = 0; state.max = 0; state.secs = 20;
+  el('who').textContent = state.name; el('pts').textContent = '0';
+  document.getElementById('max').textContent = '0';
+  document.getElementById('pct').textContent = '0';
+  start.classList.add('hidden'); game.classList.remove('hidden'); result.classList.add('hidden');
+  phase.textContent = 'กำลังเล่น';
+  newRound();
+};
+
+el('btnCheck').onclick = checkAnswers;
+el('btnNext').onclick = nextRound;
+
+// กลับหน้าแรก
+function backHome(e){
+  if(e) e.preventDefault();
+  clearInterval(state.timer);
+  start.classList.remove('hidden');
+  game.classList.add('hidden');
+  result.classList.add('hidden');
+  phase.textContent = 'เริ่มต้น';
+  return false;
+}
+window.backHome = backHome;
+</script>
+</body>
+</html>
